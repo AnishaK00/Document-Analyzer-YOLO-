@@ -1,63 +1,96 @@
-# YOLO Streamlit Document Analyzer
+Overview
 
-A Streamlit-based web application that uses **YOLO (Ultralytics)** to detect and analyze objects/regions in uploaded documents or images. The system supports image processing, object detection, and visualization of detected results in real time.
+This project is a deep learning-based document analysis system that detects and classifies structural components in documents such as text blocks, tables, and figures using a custom-trained YOLO (You Only Look Once) object detection model.
 
----
+It provides a simple web interface built with Streamlit, allowing users to upload images or PDFs and visualize detected regions.
 
-## 🚀 Features
+Features
+Detects document elements:
+Text regions
+Tables
+Figures/images
+YOLO-based real-time object detection
+Supports image and PDF inputs
+Visualizes bounding boxes on detected elements
+Streamlit-based interactive UI
+Modular backend (separated detection and utility logic)
+Tech Stack
+Python 3.10+
+YOLO (Ultralytics / custom-trained model)
+OpenCV
+PyTorch
+Streamlit
+Pillow (PIL)
+NumPy
+Project Structure
+project/
+│── app.py                  # Streamlit UI entry point
+│── detector.py            # YOLO inference logic
+│── utils.py               # Helper functions (PDF/image processing)
+│── models/
+│     └── best.pt          # Trained YOLO model weights
+│── uploads/               # Temporary uploaded files
+│── outputs/               # Processed output images
+│── requirements.txt
+│── README.md
+Model Details
+Architecture: YOLO (You Only Look Once)
+Version: YOLOv5/YOLOv8 (depending on training setup)
+Classes:
+text
+table
+figure
+Input size: 640×640 (standard training resolution)
+Output: Bounding boxes with class labels and confidence scores
 
-- Upload images or documents (PDF/image support)
-- Object detection using **YOLO (Ultralytics)**
-- Visualization of bounding boxes on detected objects
-- PDF-to-image conversion for document analysis
-- Streamlit-based interactive UI
-- Modular architecture (`app.py`, `detector.py`, `utils.py`)
+The model was trained on a custom dataset containing annotated document pages with structural elements.
 
----
-
-## 🧠 Tech Stack
-
-- Python 3.10+
-- Streamlit
-- Ultralytics YOLO
-- OpenCV
-- PyTorch
-- pdf2image
-- Pillow
-- NumPy
-
----
-## ⚙️ Installation
-
-### 1. Clone the repository
-
+Installation
+1. Clone the repository
+```bash
 https://github.com/AnishaK00/Document-Analyzer-YOLO-.git
 cd YOLO
-
-2. Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-4. Install dependencies
+```
+2. Create virtual environment (optional but recommended)
+```bash
+python -m venv venv
+source venv/bin/activate   # Mac/Linux
+venv\Scripts\activate      # Windows
+```
+3. Install dependencies
+```bash
 pip install -r requirements.txt
+```
+Running the Project
 
-6. Install system dependency (macOS only)
-brew install poppler
+Start the Streamlit application:
+```bash
+streamlit run app.py
+```
 
-▶️ Running the App
-python -m streamlit run app.py
+Then open in browser:
 
-Then open:
 http://localhost:8501
 
-### Model Details
+Usage
+1. Launch the application
+2. Upload a document image or PDF
+3. The system will:
+ -Convert PDF pages to images (if applicable)
+ -Run YOLO detection
+ -Display annotated results
+4. View detected text, tables, and figures with bounding boxes
+   
+Output Example
+Input: Scanned document / research paper page
+Output: Image with labeled bounding boxes around:
+-Paragraphs (text)
+-Tables
+-Figures/diagrams
 
-This project uses Ultralytics YOLO (You Only Look Once), a state-of-the-art real-time object detection model.
-
-Framework: Ultralytics YOLOv8
-Default model: yolov8n.pt (nano version, lightweight and fast)
-Loaded using:
-from ultralytics import YOLO
-
-model = YOLO("yolov8n.pt")
- 
+Future Improvements
+1. Add OCR integration for text extraction
+2. Improve table structure recognition (cell-level detection)
+3. Export results as JSON/CSV
+4. Multi-page PDF batch processing
+5. Model upgrade to YOLOv8-seg for segmentation

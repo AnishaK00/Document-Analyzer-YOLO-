@@ -31,21 +31,25 @@ A Streamlit-based web application that uses **YOLO (Ultralytics)** to detect and
 
 ### 1. Clone the repository
 
-git clone https://github.com/<your-username>/<repo-name>.git
+https://github.com/AnishaK00/Document-Analyzer-YOLO-.git
 cd YOLO
+
 2. Create virtual environment
 python3 -m venv venv
 source venv/bin/activate
-3. Install dependencies
+
+4. Install dependencies
 pip install -r requirements.txt
-4. Install system dependency (macOS only)
+
+6. Install system dependency (macOS only)
 brew install poppler
+
 ▶️ Running the App
 python -m streamlit run app.py
 
 Then open:
-
 http://localhost:8501
+
 ### Model Details
 
 This project uses Ultralytics YOLO (You Only Look Once), a state-of-the-art real-time object detection model.

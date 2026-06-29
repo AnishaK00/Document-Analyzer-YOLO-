@@ -1,0 +1,9 @@
+path: /Users/kumpakha/Desktop/AI Ml workshop/YOLO/dataset
+train: images/train
+val: images/val
+
+names:
+  0: text
+  1: table
+  2: figure
+nc: 3

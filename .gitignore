@@ -1,33 +1,48 @@
 # Python cache
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
 
-# Virtual environment
+# Virtual environments
 venv/
+.venv/
 env/
-.env/
 
-# Streamlit
-.streamlit/
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
 
-# OS files
+# Streamlit secrets
+.streamlit/secrets.toml
+.streamlit/credentials.toml
+
+# macOS files
 .DS_Store
-Thumbs.db
+**/.DS_Store
+.AppleDouble
+.LSOverride
 
-# Logs
-*.log
-
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints/
-
-
-
-# Temporary files
-*.tmp
-*.swp
-
-# IDE files
+# IDE settings
 .vscode/
 .idea/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.swp
+
+# Dataset - temporarily excluded pending licence verification
+dataset/
+
+# Generated output images
+output/
+
+# YOLO training runs and generated results
+runs/
+
+# YOLO base model (optional local training file)
+yolov8n.pt

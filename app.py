@@ -3,8 +3,15 @@ import tempfile
 from PIL import Image
 from utils import *
 from detector import *
+from components.page_viewer import render_page_preview
+from processors import process_selected_crop
 
-# ---------------- PAGE CONFIG ----------------
+
+
+# ============================================================
+# PAGE CONFIG
+# ============================================================
+
 st.set_page_config(
     page_title="Document Analyzer",
     page_icon="📑",
@@ -12,273 +19,798 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ---------------- BACKGROUND & GLOBAL STYLE ----------------
+
+# ============================================================
+# GLOBAL STYLE
+# ============================================================
+
 def set_app_style():
-    """
-    CSS-only mesh-gradient background: large soft color blobs
-    on a dark slate base, with a frosted-glass card on top.
-    No image asset needed, and the blur keeps it from ever
-    competing with the documents/tables/figures on display.
-    """
+
     st.markdown(
         """
         <style>
+
         .stApp {
-            background-color: #0f1424;
-            background-image:
-                radial-gradient(circle at 12% 18%, rgba(99,102,241,0.55) 0%, transparent 38%),
-                radial-gradient(circle at 85% 12%, rgba(45,212,191,0.45) 0%, transparent 40%),
-                radial-gradient(circle at 75% 80%, rgba(244,114,182,0.35) 0%, transparent 42%),
-                radial-gradient(circle at 15% 85%, rgba(251,191,36,0.30) 0%, transparent 40%),
-                linear-gradient(160deg, #0f1424 0%, #161b2e 100%);
-            background-attachment: fixed;
+            background: #000000;
         }
 
         .block-container {
+            max-width: 1200px;
             padding-top: 2rem;
             padding-bottom: 3rem;
-            background-color: rgba(255,255,255,0.88);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            border: 1px solid rgba(255,255,255,0.6);
-            border-radius: 20px;
-            max-width: 1200px;
-            box-shadow: 0 20px 60px rgba(15,23,42,0.35);
         }
 
-        h1, h2, h3 {
-            color: #1f2937;
+
+        /* ====================================================
+           HIDE STREAMLIT DEFAULT ELEMENTS
+           ==================================================== */
+
+        #MainMenu {
+            visibility: hidden;
         }
+
+        footer {
+            visibility: hidden;
+        }
+
+        header {
+            background: transparent !important;
+        }
+
+
+        /* ====================================================
+           TYPOGRAPHY
+           ==================================================== */
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            color: #111827 !important;
+            letter-spacing: -0.02em;
+        }
+
+
+        /* ====================================================
+           UPLOAD
+           ==================================================== */
+
+        div[data-testid="stFileUploaderDropzone"] {
+
+            background: #ffffff !important;
+
+            border: 1.5px dashed #d1d5db !important;
+
+            border-radius: 14px !important;
+
+            transition:
+                border-color 0.2s ease,
+                background 0.2s ease;
+        }
+
+        div[data-testid="stFileUploaderDropzone"]:hover {
+
+            border-color: #6366f1 !important;
+
+            background: #fafaff !important;
+        }
+
+
+        /* ====================================================
+           NATIVE BORDERED CONTAINERS
+           ==================================================== */
+
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+
+            border-radius: 16px !important;
+
+            border-color: #e5e7eb !important;
+
+            background: #ffffff !important;
+
+            box-shadow:
+                0 2px 8px rgba(15, 23, 42, 0.04);
+        }
+
+        div[data-testid="stVerticalBlockBorderWrapper"] > div {
+
+            border-radius: 16px !important;
+        }
+
+
+        /* ====================================================
+           PAGE NAVIGATION BUTTONS
+           ==================================================== */
+
+        div[data-testid="stButton"] button {
+
+            border-radius: 10px !important;
+
+            width: 38px !important;
+
+            height: 38px !important;
+
+            min-width: 38px !important;
+
+            padding: 0 !important;
+
+            border: 1px solid #e5e7eb !important;
+
+            background: #ffffff !important;
+
+            color: #374151 !important;
+
+            font-size: 0.95rem;
+
+            font-weight: 600;
+
+            transition:
+                background 0.15s ease,
+                color 0.15s ease,
+                border-color 0.15s ease,
+                transform 0.15s ease;
+        }
+
+        div[data-testid="stButton"] button:hover:enabled {
+
+            background: #111827 !important;
+
+            color: #ffffff !important;
+
+            border-color: #111827 !important;
+
+            transform: translateY(-1px);
+        }
+
+        div[data-testid="stButton"] button:disabled {
+
+            opacity: 0.3;
+        }
+
+
+        /* ====================================================
+           REGION CAPTION
+           ==================================================== */
 
         .region-caption {
-            font-size: 0.78rem;
-            color: #6b7280;
+
+            font-size: 0.72rem;
+
+            color: #9ca3af;
+
             margin-top: 6px;
+
             text-align: center;
         }
 
-        /* ---- Native bordered container used to wrap each page's results ---- */
-        div[data-testid="stVerticalBlockBorderWrapper"] > div {
-            border-radius: 14px !important;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-            margin-bottom: 14px;
+
+        /* ====================================================
+           RESULT TABS
+           ==================================================== */
+
+        button[data-baseweb="tab"] {
+
+            font-size: 0.88rem !important;
+
+            font-weight: 600 !important;
+
+            color: #6b7280 !important;
+
+            padding: 0.65rem 1rem !important;
         }
 
-        /* ---- Small stat pills ---- */
-        .stat-pill {
-            display: inline-block;
-            background: #f3f4f6;
-            color: #374151;
-            border-radius: 999px;
-            padding: 4px 14px;
-            font-size: 0.85rem;
-            margin-right: 8px;
+        button[data-baseweb="tab"][aria-selected="true"] {
+
+            color: #4f46e5 !important;
         }
 
-        div[data-testid="stFileUploaderDropzone"] {
+        div[data-baseweb="tab-highlight"] {
+
+            background-color: #6366f1 !important;
+
+            height: 2px !important;
+        }
+
+
+        /* ====================================================
+           METRIC CARDS
+           ==================================================== */
+
+        div[data-testid="stMetric"] {
+
+            background: #f9fafb;
+
+            border: 1px solid #e5e7eb;
+
+            border-radius: 12px;
+
+            padding: 12px 14px;
+
+            min-height: 90px;
+        }
+
+        div[data-testid="stMetricLabel"] {
+
+            color: #6b7280 !important;
+
+            font-size: 0.78rem !important;
+
+            font-weight: 600 !important;
+        }
+
+        div[data-testid="stMetricValue"] {
+
+            color: #111827 !important;
+
+            font-size: 1.45rem !important;
+
+            font-weight: 700 !important;
+        }
+
+
+        /* ====================================================
+           ALERTS
+           ==================================================== */
+
+        div[data-testid="stAlert"] {
+
             border-radius: 12px;
         }
 
-        /* ---- Page navigator (arrow buttons + indicator) ---- */
-        .page-nav-wrap {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 18px;
-            margin: 0;
-            height: 100%;
-            padding-top: 4px;
+
+        /* ====================================================
+           RESPONSIVE
+           ==================================================== */
+
+        @media (max-width: 768px) {
+
+            .block-container {
+
+                padding-left: 1rem;
+
+                padding-right: 1rem;
+            }
+
         }
-        .page-nav-indicator {
-            background: #1f2937;
-            color: #ffffff;
-            border-radius: 999px;
-            padding: 8px 22px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            min-width: 110px;
-            text-align: center;
-            letter-spacing: 0.02em;
-        }
-        div[data-testid="stButton"] button {
-            border-radius: 50% !important;
-            width: 38px !important;
-            height: 38px !important;
-            min-width: 38px !important;
-            padding: 0 !important;
-            font-size: 1rem;
-            font-weight: 700;
-            border: 1px solid #d1d5db !important;
-            background: #ffffff !important;
-            color: #1f2937 !important;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-            transition: all 0.15s ease;
-        }
-        div[data-testid="stButton"] button:hover:enabled {
-            background: #1f2937 !important;
-            color: #ffffff !important;
-            border-color: #1f2937 !important;
-        }
-        div[data-testid="stButton"] button:disabled {
-            opacity: 0.3;
-        }
+
         </style>
         """,
         unsafe_allow_html=True,
     )
 
+
 set_app_style()
 
-# ---------------- HEADER ----------------
+
+# ============================================================
+# HEADER
+# ============================================================
+
 st.markdown(
     """
-    <h1 style='text-align:center; margin-bottom:0.2rem;'>📑 Document Analyzer</h1>
-    <p style='text-align:center; color:gray; margin-top:0;'>
-    Extract text, tables, and figures from PDFs or images using AI detection
+
+    <h1 style="
+        text-align:center;
+        margin-bottom:0.25rem;
+        font-size:2.5rem;
+        font-weight:700;
+    ">
+
+        Document Analyzer
+    </h1>
+
+    <p style="
+        text-align:center;
+        color:#6b7280;
+        margin-top:0;
+        font-size:1rem;
+    ">
+        Extract text, tables, and figures from PDFs or images using AI detection
     </p>
-    <hr>
+
+    <hr style="
+        margin-top:1.5rem;
+        margin-bottom:2rem;
+        border:none;
+        border-top:1px solid #e5e7eb;
+    ">
     """,
     unsafe_allow_html=True
 )
 
-# ---------------- LABEL MAP ----------------
-label_map = {0: "text", 1: "table", 2: "figure"}
 
-# ---------------- HELPERS ----------------
-def render_region_grid(region_list, columns=3, max_px=420):
-    """
-    Render cropped regions in a responsive grid without upscaling
-    small crops or distorting their aspect ratio.
-    """
+# ============================================================
+# LABEL MAP
+# ============================================================
+
+label_map = {
+    0: "text",
+    1: "table",
+    2: "figure"
+}
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
+def render_region_grid(
+    region_list,
+    columns=3,
+    max_px=420
+):
+
     if not region_list:
-        st.info("Nothing found in this category.")
+
+        st.info(
+            "Nothing found in this category."
+        )
+
         return
 
+
     cols = st.columns(columns)
+
+
     for idx, region in enumerate(region_list):
+
         img = region["image"]
+
         w, h = img.size
 
-        # Only shrink oversized crops — never stretch small ones up.
+
+        # Only shrink oversized crops.
+        # Never upscale smaller images.
+
         if w > max_px:
+
             scale = max_px / w
-            img = img.resize((max_px, int(h * scale)))
+
+            img = img.resize(
+                (
+                    max_px,
+                    int(h * scale)
+                )
+            )
+
 
         with cols[idx % columns]:
-            with st.container(border=True):
-                st.image(img)
-                st.markdown(
-                    f'<div class="region-caption">{w}×{h}px · region {idx + 1}</div>',
-                    unsafe_allow_html=True
+
+            with st.container(
+                border=True
+            ):
+
+                st.image(
+                    img,
+                    width="stretch"
                 )
 
-
-def render_page_preview(image, max_px=900):
-    """Show the full page at a sane, non-blurry resolution."""
-    w, h = image.size
-    if w > max_px:
-        scale = max_px / w
-        image = image.resize((max_px, int(h * scale)))
-    st.image(image)
-
-
-# ---------------- UPLOAD SECTION ----------------
-st.markdown("### 📤 Upload Document")
-
-uploaded_f = st.file_uploader(
-    "Drop your PDF or image here",
-    type=["pdf", "png", "jpg", "jpeg"]
-)
-
-# ---------------- PROCESSING ----------------
-if uploaded_f is not None:
-
-    with st.spinner("Preparing file..."):
-        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-            tmp_file.write(uploaded_f.read())
-            file_path = tmp_file.name
-
-    if uploaded_f.type == "application/pdf":
-        st.info("Converting PDF to images...")
-        page_images = convert_pdf_to_images(file_path)
-    else:
-        page_images = [Image.open(file_path).convert("RGB")]
-
-    st.success(f"File processed successfully — {len(page_images)} page(s) found.")
-
-    # ---- Page navigator: left/right arrows + indicator pill ----
-    if "page_idx" not in st.session_state:
-        st.session_state.page_idx = 0
-
-    # Clamp in case a new, shorter file was uploaded
-    st.session_state.page_idx = max(0, min(st.session_state.page_idx, len(page_images) - 1))
-
-    if len(page_images) > 1:
-        nav_l, nav_c, nav_r = st.columns([1, 4, 1])
-        with nav_l:
-            sub_l, sub_btn = st.columns([1, 1])
-            with sub_btn:
-                if st.button("◀", key="prev_page", disabled=(st.session_state.page_idx == 0)):
-                    st.session_state.page_idx -= 1
-        with nav_c:
-            st.markdown(
-                f"""
-                <div class="page-nav-wrap">
-                    <span class="page-nav-indicator">Page {st.session_state.page_idx + 1} of {len(page_images)}</span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-        with nav_r:
-            sub_btn, sub_r = st.columns([1, 1])
-            with sub_btn:
-                if st.button("▶", key="next_page", disabled=(st.session_state.page_idx == len(page_images) - 1)):
-                    st.session_state.page_idx += 1
-
-    i = st.session_state.page_idx
-    image = page_images[i]
-
-    page_container = st.container(border=True)
-    with page_container:
-        left, right = st.columns([1, 1.4])
-        with left:
-            render_page_preview(image)
-
-        with st.spinner("Running detection model..."):
-            detections = detect_regions(image)
-
-        if not detections:
-            with right:
-                st.warning("No regions detected on this page.")
-        else:
-            regions = extract_detected_regions(image, detections, label_map)
-            save_combined_regions(regions)
-
-            text_regions = [r for r in regions if r["label"] == "text"]
-            table_regions = [r for r in regions if r["label"] == "table"]
-            figure_regions = [r for r in regions if r["label"] == "figure"]
-
-            with right:
-                st.markdown("#### Summary")
                 st.markdown(
                     f"""
-                    <span class="stat-pill">📝 {len(text_regions)} text</span>
-                    <span class="stat-pill">📊 {len(table_regions)} tables</span>
-                    <span class="stat-pill">🖼️ {len(figure_regions)} figures</span>
+                    <div class="region-caption">
+                        {w} × {h}px
+                        &nbsp;·&nbsp;
+                        Region {idx + 1}
+                    </div>
                     """,
                     unsafe_allow_html=True
                 )
 
-            st.markdown("### 🔍 Detection Results")
-            tab1, tab2, tab3 = st.tabs([
-                f"📝 Text ({len(text_regions)})",
-                f"📊 Tables ({len(table_regions)})",
-                f"🖼️ Figures ({len(figure_regions)})",
-            ])
 
-            with tab1:
-                render_region_grid(text_regions, columns=3)
-            with tab2:
-                render_region_grid(table_regions, columns=2)
-            with tab3:
-                render_region_grid(figure_regions, columns=3)
+# ============================================================
+# UPLOAD SECTION
+# ============================================================
+
+
+
+st.caption(
+    "Upload a PDF or image to analyze its text, tables, and figures."
+)
+
+
+uploaded_f = st.file_uploader(
+    "Drop your PDF or image here",
+    type=[
+        "pdf",
+        "png",
+        "jpg",
+        "jpeg"
+    ]
+)
+
+
+# ============================================================
+# PROCESSING
+# ============================================================
+
+if uploaded_f is not None:
+
+    # ========================================================
+    # SAVE TEMPORARY FILE
+    # ========================================================
+
+    with st.spinner(
+        "Preparing file..."
+    ):
+
+        with tempfile.NamedTemporaryFile(
+            delete=False
+        ) as tmp_file:
+
+            tmp_file.write(
+                uploaded_f.read()
+            )
+
+            file_path = tmp_file.name
+
+
+    # ========================================================
+    # CONVERT FILE
+    # ========================================================
+
+    if uploaded_f.type == "application/pdf":
+
+        with st.spinner(
+            "Converting PDF to images..."
+        ):
+
+            page_images = convert_pdf_to_images(
+                file_path
+            )
+
+    else:
+
+        page_images = [
+            Image.open(
+                file_path
+            ).convert("RGB")
+        ]
+
+
+    st.success(
+        f"File processed successfully — "
+        f"{len(page_images)} page(s) found."
+    )
+
+
+    # ========================================================
+    # PAGE STATE
+    # ========================================================
+
+    if "page_idx" not in st.session_state:
+
+        st.session_state.page_idx = 0
+
+
+    # Clamp page index if a new file has fewer pages
+
+    st.session_state.page_idx = max(
+        0,
+        min(
+            st.session_state.page_idx,
+            len(page_images) - 1
+        )
+    )
+
+
+    # ========================================================
+    # CURRENT PAGE
+    # ========================================================
+
+    i = st.session_state.page_idx
+
+    image = page_images[i]
+
+
+    # ========================================================
+    # DETECTION
+    # ========================================================
+
+    with st.spinner(
+        "Running detection model..."
+    ):
+
+        detections = detect_regions(
+            image
+        )
+    # st.write("DETECTIONS:", detections)
+
+
+    # ========================================================
+    # PAGE PREVIEW + DETECTION RESULTS
+    # ========================================================
+
+    page_container = st.container(
+        border=True
+    )
+
+
+    with page_container:
+
+        left, right = st.columns(
+            [1, 1.4]
+        )
+
+
+        # ====================================================
+        # PAGE PREVIEW
+        # ====================================================
+
+        with left:
+
+            st.markdown(
+                "#### Page Preview"
+            )
+
+            selected_index = render_page_preview(
+                image=image,
+                detections=detections,
+                label_map=label_map
+            )
+            
+        with right:
+            st.markdown("#### Selected Region")
+            if selected_index is None:
+                st.info("Select a detected box in the page preview to inspect the regiona nd extract its content.")
+                st.markdown("##### What you can do")
+                st.markdown("""-**extract readable texts.
+                            -Detect and display the table data.
+                            -Inspect dimensions, aspect ratio and extract embedded text of the figures**""")
+                
+            else:
+                selected_detection = detections [ selected_index ]
+                x1, y1, x2, y2, conf, cls = selected_detection
+                
+                label = label_map.get(int(cls), f"class {int(cls)}")
+                
+                crop = image.crop((int(x1),int(y1), int(x2), int(y2)))
+                st.caption(f"Region {selected_index + 1}."
+                           f"{label.title()}")
+                st.image(crop, width="stretch")
+                
+                st.write(f"**Class:** {label}")
+                st.write(f"**Confidence:** {conf * 100:.1f}%")
+                    
+                st.write(f"**Region Coordinates:** " 
+                         f"({x1:.1f}, {y1:.1f}) -> "
+                         f"({x2:.1f}, {y2:.1f})")
+                
+                st.write(f"**Width:** {x2 - x1:.1f} px")
+                st.write(f"**Height:** {y2 - y1:.1f} px")
+                st.divider()
+                
+                st.markdown("##### Processing results")
+                with st.spinner(f"Processing {label} region..."):
+                    processing_output = process_selected_crop(crop, label)
+                    
+                if processing_output.get("error"):
+                    st.error(processing_output["error"])
+                    
+                else:
+                    result = processing_output["result"]
+                    
+                    if label == "text":
+                        if result:
+                            st.text_area("Extracted Text",
+                                         value=result,
+                                         height=200,
+                                         key=f"ocr_{selected_index}_{st.session_state.page_idx}"
+                                        )
+                        else:
+                            st.info("No text could be extarcted")
+                            
+                    elif label == "table":
+                        if result:
+                            for i, dataframe in enumerate(result, start=1):
+                                st.markdown(f"**Extracted Table {i}**")
+                                st.dataframe(dataframe,
+                                             width="stretch",
+                                             hide_index=True)
+                        else:
+                            st.warning("No table structure was detected.")
+                            
+                    
+                    elif label == "figure":
+                        if result:
+                            st.write(f"**Dimensions:** {result['width']} x {result['height']} pixels")
+                            
+                            st.write(f"**Orientation:** {result['orientation']}")
+                            st.write(f"**Aspect Ratio:** {result['aspect_ratio']}")
+                            st.markdown("**Text found inside the figures**")
+                            if result["embedded_text"]:
+                                st.text_area("Embedded_text",
+                                            value=result["embedded_text"],
+                                            height=150,
+                                            key=f"figure_text_{selected_index}_{st.session_state.page_idx}")
+                            else:
+                                st.info("No readable embedded text was found")
+                        else:
+                            st.info("No figure details could be extracted")
+                        
+                            
+
+            # =================================================
+            # PAGE NAVIGATION
+            # =================================================
+
+            if len(page_images) > 1:
+
+                nav_l, nav_c, nav_r = st.columns(
+                    [1, 4, 1]
+                )
+
+
+                # ---------------------------------------------
+                # PREVIOUS PAGE
+                # ---------------------------------------------
+
+                with nav_l:
+
+                    sub_l, sub_btn = st.columns(
+                        [1, 1]
+                    )
+
+                    with sub_btn:
+
+                        if st.button(
+                            "◀",
+                            key="prev_page",
+                            disabled=(
+                                st.session_state.page_idx == 0
+                            )
+                        ):
+
+                            st.session_state.page_idx -= 1
+
+                            st.rerun()
+
+
+                # ---------------------------------------------
+                # PAGE INDICATOR
+                # ---------------------------------------------
+
+                with nav_c:
+
+                    st.markdown(
+                        f"""
+                        <div style="
+                            text-align:center;
+                            padding-top:4px;
+                            font-weight:600;
+                            font-size:0.95rem;
+                            color:#374151;
+                        ">
+                            Page {st.session_state.page_idx + 1}
+                            / {len(page_images)}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+
+                # ---------------------------------------------
+                # NEXT PAGE
+                # ---------------------------------------------
+
+                with nav_r:
+
+                    sub_btn, sub_r = st.columns(
+                        [1, 1]
+                    )
+
+                    with sub_btn:
+
+                        if st.button(
+                            "▶",
+                            key="next_page",
+                            disabled=(
+                                st.session_state.page_idx
+                                == len(page_images) - 1
+                            )
+                        ):
+
+                            st.session_state.page_idx += 1
+
+                            st.rerun()
+
+
+        # ====================================================
+        # DETECTION RESULTS
+        # ====================================================
+
+        # with right:
+
+        #     st.markdown(
+        #         "#### Detection Results"
+        #     )
+
+        #     if not detections:
+
+        #         st.warning(
+        #             "No regions detected on this page."
+        #         )
+
+        #     else:
+
+        #         regions = extract_detected_regions(
+        #             image,
+        #             detections,
+        #             label_map
+        #         )
+
+
+        #         save_combined_regions(
+        #             regions
+        #         )
+
+
+        #         text_regions = [
+        #             r
+        #             for r in regions
+        #             if r["label"] == "text"
+        #         ]
+
+
+        #         table_regions = [
+        #             r
+        #             for r in regions
+        #             if r["label"] == "table"
+        #         ]
+
+
+        #         figure_regions = [
+        #             r
+        #             for r in regions
+        #             if r["label"] == "figure"
+        #         ]
+
+
+        #         # --------------------------------------------
+        #         # DETECTED REGION TABS
+        #         # --------------------------------------------
+
+        #         if detections:
+
+        #             tab1, tab2, tab3 = st.tabs(
+        #                 [
+        #                     f":material/article: Text ({len(text_regions)})",
+        #                     f":material/table: Tables ({len(table_regions)})",
+        #                     f":material/image: Figures ({len(figure_regions)})"
+        #                 ]
+        #             )
+
+
+        #             # ========================================
+        #             # TEXT
+        #             # ========================================
+
+        #             with tab1:
+
+        #                 render_region_grid(
+        #                     text_regions,
+        #                     columns=3
+        #                 )
+
+
+        #             # ========================================
+        #             # TABLES
+        #             # ========================================
+
+        #             with tab2:
+
+        #                 render_region_grid(
+        #                     table_regions,
+        #                     columns=2
+        #                 )
+
+
+        #             # ========================================
+        #             # FIGURES
+        #             # ========================================
+
+        #             with tab3:
+
+        #                 render_region_grid(
+        #                     figure_regions,
+        #                     columns=3
+        #                 )

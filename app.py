@@ -66,7 +66,6 @@ def set_app_style():
         h2,
         h3,
         h4 {
-            color: #111827 !important;
             letter-spacing: -0.02em;
         }
 
@@ -539,18 +538,25 @@ if uploaded_f is not None:
         with left:
 
             st.markdown(
-                "#### Page Preview"
-            )
+                    "<h4 style='color: white;'>Page Preview</h4>",
+                    unsafe_allow_html=True
+                )
 
             selected_index = render_page_preview(
                 image=image,
                 detections=detections,
-                label_map=label_map
+                label_map=label_map,
+                key=f"documnet_detection_viewer_{st.session_state.page_idx}"
             )
             
         with right:
-            st.markdown("#### Selected Region")
-            if selected_index is None:
+            st.markdown(
+                    "<h4 style='color: white;'>Selected Region</h4>",
+                    unsafe_allow_html=True
+                )
+            if (selected_index is None
+                or not detections
+                or not (0 <= selected_index < len(detections))):
                 st.info("Select a detected box in the page preview to inspect the regiona nd extract its content.")
                 st.markdown("##### What you can do")
                 st.markdown("""-**extract readable texts.

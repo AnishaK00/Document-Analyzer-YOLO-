@@ -8,7 +8,8 @@ def render_page_preview(
     image,
     detections=None,
     label_map=None,
-    max_px=900
+    max_px=900,
+    key="page_viewer"  
 ):
 
     # --------------------------------------------------------
@@ -242,7 +243,7 @@ def render_page_preview(
     # --------------------------------------------------------
 
     result = viewer(
-        key="document_detection_viewer",
+        key=key,
         default={
             "selected": None
         },

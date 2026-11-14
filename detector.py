@@ -1,14 +1,20 @@
 from ultralytics import YOLO
 from PIL import Image
+import streamlit as st
+import time
 
-model = YOLO("model/best.pt")  
+@st.cache_resource
+def load_model():
+    return YOLO("model/best.pt")
+
+model = load_model()
 
 
 def detect_regions(image):
-
+    start_time = time.perf_counter()
 
     # Run the model on the image
-    results = model(image)
+    results = model.predict(source=image, verbose=False)
 
     # Get the first result (batch size 1)
     result = results[0]
@@ -23,5 +29,9 @@ def detect_regions(image):
 
         # Append detection tuple
         regions.append((x1, y1, x2, y2, conf, cls))
+    
+    elapsed = time.perf_counter() - start_time
+    print(f"Total detection time: {elapsed:.3f} seconds")
+    print(f"YOLO timing breakdown: {result.speed}")
 
     return regions

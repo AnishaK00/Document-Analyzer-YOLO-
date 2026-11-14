@@ -7,7 +7,8 @@ def convert_pdf_to_images(pdf_path):
     """
     Convert a PDF file to a list of PIL Image objects.
     """
-    return convert_from_path(pdf_path, dpi=200, poppler_path="/opt/homebrew/bin")
+    # return convert_from_path(pdf_path, dpi=200, poppler_path="/opt/homebrew/bin")
+    return convert_from_path(pdf_path, dpi=200)
 
 def extract_detected_regions(image: Image.Image, detections, label_map):
 
